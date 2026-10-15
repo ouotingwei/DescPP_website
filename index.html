@@ -85,6 +85,277 @@
   <!-- Critical CSS - Load synchronously -->
   <link rel="stylesheet" href="static/css/bulma.min.css">
   <link rel="stylesheet" href="static/css/index.css">
+
+  <!-- ===== Desc++: publication links + plug-and-play animation ===== -->
+  <style>
+    /* ---------- Publication link buttons ---------- */
+    .publication-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+    .publication-links .link-block { margin: 0; }
+    .button.is-coming-soon {
+      opacity: 0.55;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ---------- Plug-and-play animation ---------- */
+    /* One full cycle = 9s. Timeline:
+       0–28%   original pipeline (slot looks like a plain arrow)
+       18–30%  insertion point is highlighted (dashed slot)
+       28–40%  Desc++ drops into the slot
+       40–92%  enhanced pipeline: tinted descriptors, "unchanged" ticks, badges
+       92–100% fade back to the original pipeline                       */
+    .pnp {
+      --pnp-accent: #2563eb;
+      --pnp-accent-2: #7c3aed;
+      --pnp-ok: #16a34a;
+      --pnp-muted: #9ca3af;
+      --pnp-line: #d1d5db;
+      --pnp-text: #1f2937;
+      --pnp-sub: #6b7280;
+      --pnp-cycle: 9s;
+      max-width: 960px;
+      margin: 2rem auto 0;
+    }
+
+    .pnp-state {
+      position: relative;
+      height: 1.6rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .pnp-state span { position: absolute; left: 0; right: 0; }
+    .pnp-state .is-before { color: var(--pnp-sub); animation: pnp-state-before var(--pnp-cycle) infinite; }
+    .pnp-state .is-after  { color: var(--pnp-accent); opacity: 0; animation: pnp-state-after var(--pnp-cycle) infinite; }
+
+    .pnp-demo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pnp-stage {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.85rem 0.5rem;
+      background: #fff;
+      border: 1.5px solid var(--pnp-line);
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .pnp-name {
+      display: block;
+      font-weight: 600;
+      font-size: 0.88rem;
+      line-height: 1.3;
+      color: var(--pnp-text);
+    }
+    .pnp-note {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      color: var(--pnp-sub);
+    }
+    .pnp-keep {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--pnp-ok);
+      opacity: 0;
+      animation: pnp-keep var(--pnp-cycle) infinite;
+    }
+
+    /* Arrows with flowing "descriptor" dots */
+    .pnp-arrow {
+      position: relative;
+      flex: 0 0 34px;
+      height: 2px;
+      margin: 0 5px;
+      background: var(--pnp-line);
+    }
+    .pnp-arrow::after {
+      content: '';
+      position: absolute;
+      right: -2px;
+      top: -4px;
+      border-left: 7px solid var(--pnp-line);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .pnp-dot {
+      position: absolute;
+      top: -3px;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--pnp-muted);
+      animation: pnp-flow 1.4s linear infinite;
+    }
+    .pnp-arrow.is-post .pnp-dot {
+      animation: pnp-flow 1.4s linear infinite, pnp-tint var(--pnp-cycle) infinite;
+    }
+
+    /* Insertion slot + Desc++ block */
+    .pnp-slot {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      align-self: stretch;
+      min-height: 72px;
+      border: 1.5px dashed transparent;
+      border-radius: 10px;
+      animation: pnp-slot var(--pnp-cycle) infinite;
+    }
+    .pnp-bypass {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 2px;
+      margin-top: -1px;
+      background: var(--pnp-line);
+      animation: pnp-bypass var(--pnp-cycle) infinite;
+    }
+    .pnp-descpp {
+      position: absolute;
+      inset: -1.5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--pnp-accent), var(--pnp-accent-2));
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+      color: #fff;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(-60px);
+      animation: pnp-drop var(--pnp-cycle) infinite;
+    }
+    .pnp-descpp strong { color: #fff; font-size: 1.05rem; line-height: 1.2; }
+    .pnp-descpp small  { font-size: 0.7rem; opacity: 0.9; }
+
+    /* Badges */
+    .pnp-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem 0.75rem;
+      margin-top: 1.5rem;
+      min-height: 2rem;
+    }
+    .pnp-badge {
+      padding: 0.3rem 0.85rem;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-size: 0.82rem;
+      font-weight: 600;
+      opacity: 0;
+    }
+    .pnp-badge:nth-child(1) { animation: pnp-badge-1 var(--pnp-cycle) infinite; }
+    .pnp-badge:nth-child(2) { animation: pnp-badge-2 var(--pnp-cycle) infinite; }
+    .pnp-badge:nth-child(3) { animation: pnp-badge-3 var(--pnp-cycle) infinite; }
+
+    .pnp-caption {
+      max-width: 860px;
+      margin: 1.25rem auto 0;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* Keyframes */
+    @keyframes pnp-flow {
+      0%   { left: 0; opacity: 0; }
+      15%  { opacity: 1; }
+      85%  { opacity: 1; }
+      100% { left: calc(100% - 8px); opacity: 0; }
+    }
+    @keyframes pnp-tint {
+      0%, 38%   { background: var(--pnp-muted); box-shadow: none; }
+      44%, 92%  { background: var(--pnp-accent); box-shadow: 0 0 6px rgba(37, 99, 235, 0.7); }
+      100%      { background: var(--pnp-muted); box-shadow: none; }
+    }
+    @keyframes pnp-slot {
+      0%, 16%   { border-color: transparent; background: transparent; }
+      22%, 92%  { border-color: var(--pnp-muted); background: rgba(37, 99, 235, 0.04); }
+      100%      { border-color: transparent; background: transparent; }
+    }
+    @keyframes pnp-bypass {
+      0%, 28%   { opacity: 1; }
+      36%, 94%  { opacity: 0; }
+      100%      { opacity: 1; }
+    }
+    @keyframes pnp-drop {
+      0%, 28%   { opacity: 0; transform: translateY(-60px); }
+      37%       { opacity: 1; transform: translateY(5px); }
+      41%       { opacity: 1; transform: translateY(0); }
+      90%       { opacity: 1; transform: translateY(0); }
+      96%, 100% { opacity: 0; transform: translateY(0); }
+    }
+    @keyframes pnp-keep {
+      0%, 42%   { opacity: 0; }
+      48%, 90%  { opacity: 1; }
+      96%, 100% { opacity: 0; }
+    }
+    @keyframes pnp-state-before {
+      0%, 30%   { opacity: 1; }
+      36%, 94%  { opacity: 0; }
+      100%      { opacity: 1; }
+    }
+    @keyframes pnp-state-after {
+      0%, 30%   { opacity: 0; }
+      36%, 92%  { opacity: 1; }
+      98%, 100% { opacity: 0; }
+    }
+    @keyframes pnp-badge-1 { 0%, 46% { opacity: 0; transform: translateY(6px); } 51%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; } }
+    @keyframes pnp-badge-2 { 0%, 53% { opacity: 0; transform: translateY(6px); } 58%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; } }
+    @keyframes pnp-badge-3 { 0%, 60% { opacity: 0; transform: translateY(6px); } 65%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; } }
+
+    /* Phone: stack vertically */
+    @media (max-width: 768px) {
+      .pnp-demo { flex-direction: column; }
+      .pnp-stage, .pnp-slot { width: 100%; max-width: 300px; flex: 0 0 auto; }
+      .pnp-slot { align-self: center; min-height: 64px; }
+      .pnp-arrow { flex: 0 0 28px; width: 2px; height: 28px; margin: 5px 0; }
+      .pnp-arrow::after {
+        right: auto; top: auto; left: -4px; bottom: -2px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 7px solid var(--pnp-line);
+        border-bottom: 0;
+      }
+      .pnp-dot { top: 0; left: -3px; animation-name: pnp-flow-v; }
+      .pnp-arrow.is-post .pnp-dot { animation-name: pnp-flow-v, pnp-tint; }
+      .pnp-bypass { left: 50%; right: auto; top: 0; bottom: 0; width: 2px; height: auto; margin: 0 0 0 -1px; }
+    }
+    @keyframes pnp-flow-v {
+      0%   { top: 0; opacity: 0; }
+      15%  { opacity: 1; }
+      85%  { opacity: 1; }
+      100% { top: calc(100% - 8px); opacity: 0; }
+    }
+
+    /* Respect reduced-motion: show the final (enhanced) state, no movement */
+    @media (prefers-reduced-motion: reduce) {
+      .pnp *, .pnp *::before, .pnp *::after { animation: none !important; }
+      .pnp-descpp { opacity: 1; transform: none; }
+      .pnp-bypass, .pnp-dot, .pnp-state .is-before { opacity: 0; }
+      .pnp-state .is-after, .pnp-keep, .pnp-badge { opacity: 1; }
+    }
+  </style>
   
   <!-- Non-critical CSS - Load asynchronously -->
   <link rel="preload" href="static/css/bulma-carousel.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -233,85 +504,84 @@
 
 <body>
 
-
-</section>
   <main id="main-content">
   <section class="hero">
     <div class="hero-body">
       <div class="container is-max-desktop">
         <div class="columns is-centered">
           <div class="column has-text-centered">
-            <!-- TODO: Replace with your paper title -->
             <h1 class="title is-2 publication-title">Desc++: Efficient Descriptor Enhancement for Data Association in Existing Visual SLAM Systems</h1>
             <div class="is-size-5 publication-authors">
               <!-- TODO: Replace with your paper authors and their personal links -->
               <span class="author-block">
                 <a href="https://ouotingwei.github.io/" target="_blank">TingWei Ou</a>,</span>
-                <span class="author-block">
-                  <a href="SECOND AUTHOR PERSONAL LINK" target="_blank">HuangTing Lin</a>,</span>
-                  <span class="author-block">
-                    <a href="THIRD AUTHOR PERSONAL LINK" target="_blank">KuuYoung Young</a>
-                  </span>
-                  </div>
+              <span class="author-block">
+                <a href="SECOND AUTHOR PERSONAL LINK" target="_blank">HuangTing Lin</a>,</span>
+              <span class="author-block">
+                <a href="THIRD AUTHOR PERSONAL LINK" target="_blank">KuuYoung Young</a>
+              </span>
+            </div>
 
-                  <div class="is-size-5 publication-authors">
-                    <!-- TODO: Replace with your institution and conference/journal info -->
-                    <span class="author-block">Human and Machine Lab, NYCU<br>Under Review</span>
-                    <!-- TODO: Remove this line if no equal contribution -->
-                    <!-- <span class="eql-cntrb"><small><br><sup>†</sup>Indicates Equal Contribution</small></span> -->
-                  </div>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">Human and Machine Lab, NYCU<br>IEEE Access 2026</span>
+              <!-- <span class="eql-cntrb"><small><br><sup>†</sup>Indicates Equal Contribution</small></span> -->
+            </div>
 
-                  <!-- <div class="column has-text-centered">
-                    <div class="publication-links">
-                      <span class="link-block">
-                        <a href="https://arxiv.org/pdf/<ARXIV PAPER ID>.pdf" target="_blank"
-                        class="external-link button is-normal is-rounded is-dark">
-                        <span class="icon">
-                          <i class="fas fa-file-pdf"></i>
-                        </span>
-                        <span>Paper</span>
-                      </a>
-                    </span> -->
+            <!-- Publication links -->
+            <div class="publication-links">
+              <!-- Paper PDF (switch to the IEEE Xplore PDF once it is online, if you prefer) -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/2607.11099" target="_blank" rel="noopener"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper</span>
+                </a>
+              </span>
 
-                    <!-- TODO: Add your supplementary material PDF or remove this section -->
-                    <!-- <span class="link-block">
-                      <a href="static/pdfs/supplementary_material.pdf" target="_blank"
-                      class="external-link button is-normal is-rounded is-dark">
-                      <span class="icon">
-                        <i class="fas fa-file-pdf"></i>
-                      </span>
-                      <span>Supplementary</span>
-                    </a>
-                  </span> -->
-
-                  <!-- TODO: Replace with your GitHub repository URL -->
-                  <!-- <span class="link-block">
-                    <a href="https://github.com/YOUR REPO HERE" target="_blank"
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fab fa-github"></i>
-                    </span>
-                    <span>Code</span>
-                  </a>
-                </span> -->
-
-                <!-- TODO: Update with your arXiv paper ID -->
-                <!-- <span class="link-block">
-                  <a href="https://arxiv.org/abs/<ARXIV PAPER ID>" target="_blank"
-                  class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                    <i class="ai ai-arxiv"></i>
-                  </span>
+              <!-- arXiv -->
+              <span class="link-block">
+                <a href="https://arxiv.org/abs/2607.11099" target="_blank" rel="noopener"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="ai ai-arxiv"></i></span>
                   <span>arXiv</span>
                 </a>
-              </span> -->
+              </span>
+
+              <!-- TODO: Uncomment and add the DOI once the IEEE Access version is online -->
+              <!--
+              <span class="link-block">
+                <a href="https://doi.org/YOUR_DOI_HERE" target="_blank" rel="noopener"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="ai ai-ieee"></i></span>
+                  <span>IEEE Xplore</span>
+                </a>
+              </span>
+              -->
+
+              <!-- Code -->
+              <span class="link-block">
+                <a href="https://github.com/ouotingwei/DescPP" target="_blank" rel="noopener"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code</span>
+                </a>
+              </span>
+
+              <!-- Jump to BibTeX -->
+              <span class="link-block">
+                <a href="#BibTeX" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-quote-right"></i></span>
+                  <span>BibTeX</span>
+                </a>
+              </span>
             </div>
+            <!-- End publication links -->
+
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
 <!-- Demo -->
 <section class="hero is-small is-light">
@@ -360,9 +630,8 @@
       <div class="column is-four-fifths">
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
-          <!-- TODO: Replace with your paper abstract -->
           <p>
-            Reliable visual data association is fundamental to visual SLAM (V-SLAM), as it directly determines the quality of the camera pose estimation and map consistency. However, the handcrafted descriptors used by most mature real-time systems degrade under illumination and viewpoint changes, while learning-based front-ends that address this weakness typically require replacing the extraction-and-matching pipeline and introduce substantial computational overhead. Descriptor enhancement offers a compromise by refining existing descriptors within their original format, yet current methods rely on simplified attention mechanisms whose limited contextual modeling constrains the achievable matching quality. To resolve this trade-off between contextual expressiveness and efficiency, we propose Desc++, a lightweight enhancement module that jointly encodes descriptor representations and keypoint geometry and aggregates spatial context through a hybrid architecture that combines order-agnostic global attention with geometry-aware sequential modeling in linear time. The enhanced descriptors retain their original dimensionality and matching interface, enabling integration into deployed V-SLAM systems without modifying the pipeline. Experiments across descriptor matching, correspondence analysis, and system-level benchmarks with four different V-SLAM systems demonstrate that Desc++ improves matching accuracy over the state-of-the-art enhancement method, translates these gains into more accurate and stable trajectory estimation, and achieves a favorable balance between accuracy and efficiency for practical integration into existing real-time V-SLAM pipelines.
+            Reliable visual data association is fundamental to visual SLAM (V-SLAM), as it directly determines the quality of the camera pose estimation and map consistency. However, the handcrafted descriptors used by most mature real-time systems degrade under illumination and viewpoint changes, while learning-based front-ends that address this weakness typically require replacing the extraction-and-matching pipeline and introduce substantial computational overhead. Descriptor enhancement offers a compromise by refining existing descriptors within their original format, although current methods rely on simplified attention mechanisms whose limited contextual modeling constrains the achievable matching quality. To resolve this trade-off between contextual expressiveness and efficiency, we propose Desc++, a lightweight enhancement module that jointly encodes descriptor representations and keypoint geometry and aggregates spatial context through a hybrid architecture that combines order-agnostic global attention with geometry-aware sequential modeling in linear time. The enhanced descriptors retain their original dimensionality and matching interface, enabling integration into deployed V-SLAM systems without modifying the pipeline. Experiments across descriptor matching, correspondence analysis, and system-level benchmarks with four different V-SLAM systems demonstrate that Desc++ improves matching accuracy over the state-of-the-art enhancement method, translates these gains into more accurate and stable trajectory estimation, and achieves a favorable balance between accuracy and efficiency for practical integration into existing real-time V-SLAM pipelines.
           </p>
         </div>
       </div>
@@ -370,6 +639,71 @@
   </div>
 </section>
 <!-- End paper abstract -->
+
+<!-- Plug-and-play integration (animated) -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Plug-and-Play Integration</h2>
+
+    <div class="pnp" role="img"
+         aria-label="Animation: Desc++ is inserted between feature extraction and descriptor matching in an existing V-SLAM pipeline. Matching and tracking and mapping stay unchanged.">
+
+      <div class="pnp-state" aria-hidden="true">
+        <span class="is-before">Existing V-SLAM front-end</span>
+        <span class="is-after">+ Desc++ (drop-in)</span>
+      </div>
+
+      <div class="pnp-demo" aria-hidden="true">
+        <div class="pnp-stage">
+          <span class="pnp-name">Input Frame</span>
+          <span class="pnp-note">image</span>
+        </div>
+
+        <div class="pnp-arrow"><span class="pnp-dot"></span></div>
+
+        <div class="pnp-stage">
+          <span class="pnp-name">Feature Extraction</span>
+          <span class="pnp-note">keypoints + descriptors (e.g., ORB)</span>
+        </div>
+
+        <div class="pnp-arrow"><span class="pnp-dot"></span></div>
+
+        <div class="pnp-slot">
+          <div class="pnp-bypass"></div>
+          <div class="pnp-descpp">
+            <strong>Desc++</strong>
+            <small>enhanced descriptors</small>
+          </div>
+        </div>
+
+        <div class="pnp-arrow is-post"><span class="pnp-dot"></span></div>
+
+        <div class="pnp-stage">
+          <span class="pnp-name">Descriptor Matching</span>
+          <span class="pnp-keep">✓ unchanged</span>
+        </div>
+
+        <div class="pnp-arrow is-post"><span class="pnp-dot"></span></div>
+
+        <div class="pnp-stage">
+          <span class="pnp-name">Tracking &amp; Mapping</span>
+          <span class="pnp-keep">✓ unchanged</span>
+        </div>
+      </div>
+
+      <div class="pnp-badges" aria-hidden="true">
+        <span class="pnp-badge">Same descriptor dimensionality</span>
+        <span class="pnp-badge">Same matching interface</span>
+        <span class="pnp-badge">No pipeline modification</span>
+      </div>
+
+      <p class="pnp-caption subtitle is-size-6 has-text-justified">
+        Desc++ sits between the existing feature extractor and the matcher. It takes the original descriptors together with keypoint geometry and outputs refined descriptors in exactly the same format, so the downstream matching, tracking, and mapping modules of the host V-SLAM system run as-is.
+      </p>
+    </div>
+  </div>
+</section>
+<!-- End plug-and-play integration -->
 
 <!-- Desc++ architecture -->
 <section class="section">
@@ -384,7 +718,7 @@
            style="border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: block; max-width: 1000px; width: 100%;">
       
       <figcaption class="subtitle is-size-6 mt-4 has-text-justified" style="color: #444; display: table-caption; caption-side: bottom; line-height: 1.6;">
-         The Desc++ pipeline enhances feature descriptors by integrating spatial context and geometric priors through a Hybrid Mamba–AFT block. Instead of computationally expensive multi-scan strategies, we linearize 2D patches using a Z-order curve, which better preserves spatial locality for sequential processing. Within this framework, Mamba models long-range dependencies along the sequence, while AFT introduces lightweight global context aggregation to alleviate the directional bias introduced by unidirectional scanning.
+         The overall pipeline of Desc++. First, unstructured keypoints extracted from an image are spatially organized via Z-ordering. In the Local Fusion Stage, the geometry and original descriptor of each keypoint are fused to enrich the local representation with geometric priors. These features are then processed by the Context Aggregation Stage, where the hybrid Mamba-AFTs Block performs relation-aware modeling to capture interdependencies among features. Finally, the enhanced descriptors are used for robust matching and tracking in downstream V-SLAM tasks.
       </figcaption>
 
     </figure>
@@ -421,113 +755,6 @@
   </div>
 </section>
 <!-- Model Performance -->
-
-<!-- Demo -->
-<section class="hero is-small is-light">
-  <div class="hero-body">
-    <div class="container is-max-widescreen">
-      <div class="columns is-centered">
-        <div class="column is-12"> 
-          <h2 class="title is-3 has-text-centered mb-6">Descriptor Enhancement Comparison</h2>
-
-          <div class="slider-flex-container">
-            
-            <div class="slider-item">
-              <p class="has-text-centered is-size-5 mb-2"><strong>ORB</strong></p>
-              <div id="slider1" class="beer-slider mb-4" data-beer-label="Before">
-                <img src="static/demo_all/1_orb.png" alt="ORB 1 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/1_orb_boost.png" alt="ORB 1 After">
-                </div>
-              </div>
-              <div id="slider2" class="beer-slider" data-beer-label="Before">
-                <img src="static/demo_all/2_orb.png" alt="ORB 2 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/2_orb_boost.png" alt="ORB 2 After">
-                </div>
-              </div>
-            </div>
-
-            <div class="slider-item">
-              <p class="has-text-centered is-size-5 mb-2"><strong>SIFT</strong></p>
-              <div id="slider3" class="beer-slider mb-4" data-beer-label="Before">
-                <img src="static/demo_all/1_sift.png" alt="SIFT 1 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/1_sift_boost.png" alt="SIFT 1 After">
-                </div>
-              </div>
-              <div id="slider4" class="beer-slider" data-beer-label="Before">
-                <img src="static/demo_all/2_sift.png" alt="SIFT 2 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/2_sift_boost.png" alt="SIFT 2 After">
-                </div>
-              </div>
-            </div>
-
-            <div class="slider-item">
-              <p class="has-text-centered is-size-5 mb-2"><strong>SuperPoint</strong></p>
-              <div id="slider5" class="beer-slider mb-4" data-beer-label="Before">
-                <img src="static/demo_all/1_superpoint.png" alt="SuperPoint 1 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/1_superpoint_boost.png" alt="SuperPoint 1 After">
-                </div>
-              </div>
-              <div id="slider6" class="beer-slider" data-beer-label="Before">
-                <img src="static/demo_all/2_superpoint.png" alt="SuperPoint 2 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/2_superpoint_boost.png" alt="SuperPoint 2 After">
-                </div>
-              </div>
-            </div>
-
-            <div class="slider-item">
-              <p class="has-text-centered is-size-5 mb-2"><strong>ALIKE</strong></p>
-              <div id="slider7" class="beer-slider mb-4" data-beer-label="Before">
-                <img src="static/demo_all/1_alike.png" alt="ALIKE 1 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/1_alike_boost.png" alt="ALIKE 1 After">
-                </div>
-              </div>
-              <div id="slider8" class="beer-slider" data-beer-label="Before">
-                <img src="static/demo_all/2_alike.png" alt="ALIKE 2 Before">
-                <div class="beer-reveal" data-beer-label="After">
-                  <img src="static/demo_all/2_alike_boost.png" alt="ALIKE 2 After">
-                </div>
-              </div>
-            </div>
-
-          </div> </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- End Demo -->
-
-<!-- SLAM Benchmark -->
-<section class="section">
-  <div class="container is-max-desktop">
-    <div class="columns is-centered has-text-centered">
-      <div class="column is-full">
-        
-        <h2 class="title is-3 has-text-centered">Public SLAM Benchmarks</h2>
-        
-        <figure style="display: table; margin: 0 auto; margin-top: 2rem; max-width: 1000px; width: 100%;">
-          
-          <img src="static/images/SLAM_Benchmark.png" 
-               alt="Quantitative evaluation of Desc++" 
-               style="border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: block; width: 100%;">
-          
-          <figcaption class="subtitle is-size-6 mt-4 has-text-justified" style="color: #444; display: table-caption; caption-side: bottom; line-height: 1.6;">
-            ATE RMSE comparison on the EuRoC (MH) and KITTI (even) sequences. Bars represent the mean error across five runs, and error bars indicate the corresponding range. Desc++ (blue) achieves lower error and variance compared with the baseline (orange).
-          </figcaption>
-          
-        </figure>
-        
-      </div>
-    </div>
-  </div>
-</section>
-<!-- End SLAM Benchmark -->
 
 <section class="hero teaser">
   <div class="container is-max-desktop">
@@ -608,6 +835,7 @@
 </section>
 <!--End BibTex citation -->
 
+  </main>
 
   <footer class="footer">
   <div class="container">
@@ -616,7 +844,7 @@
         <div class="content">
 
           <p>
-            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
             You are free to borrow the source code of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
             Commons Attribution-ShareAlike 4.0 International License</a>.
           </p>
